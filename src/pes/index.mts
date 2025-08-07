@@ -40,7 +40,6 @@ export default (ps: PSDemuxResult[]): PESDemuxResult[] => {
         if (subtitle_id !== 0) { continue; }
 
         if (has_PTS) {
-          //parse(packet);
           if (ps_offset != null) {
             result.push({
               offset: ps_offset,
