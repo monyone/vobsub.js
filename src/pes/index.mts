@@ -4,7 +4,6 @@ import concat from "../utils/concat.mts";
 
 export type PESDemuxResult = {
   offset: number;
-  pts: number;
   data: Uint8Array;
 }
 
@@ -43,7 +42,6 @@ export default (ps: PSDemuxResult[]): PESDemuxResult[] => {
           if (ps_offset != null) {
             result.push({
               offset: ps_offset,
-              pts: 0,
               data: concat(packets)
             })
           }
@@ -59,7 +57,6 @@ export default (ps: PSDemuxResult[]): PESDemuxResult[] => {
   if (ps_offset != null) {
     result.push({
       offset: ps_offset,
-      pts: 0,
       data: concat(packets),
     })
   }
