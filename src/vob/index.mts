@@ -1,11 +1,12 @@
 import { ByteReader } from "../utils/byte-reader.mts";
 import EOFError from "../utils/eof.mts";
 
-export type RenderResult = {
+export type VOBData = {
+  begin: number,
+  end: number | null,
   origin: [number, number];
   extent: [number, number];
-  //data: Uint8Array; // RGBA
-  data: number[];
+  data: Uint8Array; // RGBA
 };
 
 const extract_nibbles = (data: Uint8Array) => {
@@ -53,19 +54,24 @@ class NibbleReader {
   }
 }
 
-export default (packet: Uint8Array): RenderResult => {
+export default (packet: Uint8Array, palette: string[]): VOBData => {
   const reader = new ByteReader(packet);
+  const rgb = palette.map((color) => {
+    const R = Number.parseInt(color.slice(0, 2), 16);
+    const G = Number.parseInt(color.slice(2, 4), 16);
+    const B = Number.parseInt(color.slice(4, 6), 16);
+    return [R, G, B];
+  });
 
-  const subtitle_size = reader.readU16();
+  reader.skip(2); // subtitle_size
   const data_packet_size = reader.readU16();
   const data_packet = reader.read(data_packet_size - 4);
 
-  console.log(`Subtitle Size: ${subtitle_size}`)
-  console.log(`Data Size: ${data_packet_size}`)
-
-  let start = 0, end = null;
-  let offsets = [-1, -1];
-  let coords = [-1, -1, -1, -1];
+  let begin = 0, end = null;
+  let offsets: [number, number] | null = null;
+  let coords: [number, number, number, number] | null = null;
+  let index: [number, number, number, number] | null = null;
+  let alpha: [number, number, number, number] | null = null;
 
   while (!reader.isEmpty()) {
     const curr = reader.consumed();
@@ -76,27 +82,28 @@ export default (packet: Uint8Array): RenderResult => {
     LOOP:
     while (reader.exists(1)) {
       switch (reader.readU8()) {
-        case 0x00: // FORCE DISPLAYING
-          console.log('FORCE');
+        case 0x00: { // FORCE DISPLAYING
           break;
-        case 0x01: // START CAPTION
-          console.log('START');
-          start = seconds;
+        }
+        case 0x01: { // START CAPTION
+          begin = seconds;
           break;
-        case 0x02: // STOP CAPTION
-          console.log('STOP');
+        }
+        case 0x02: { // STOP CAPTION
           end = seconds;
           break;
-        case 0x03: // PALETTE
-          console.log('PALETTE');
-          const palette = extract_nibbles(reader.read(2));
+        }
+        case 0x03: { // PALETTE
+          const nibbles = extract_nibbles(reader.read(2));
+          index = [nibbles[0], nibbles[1], nibbles[2], nibbles[3]];
           break;
-        case 0x04: // ALPHA
-          console.log('ALPHA');
-          const alpha = extract_nibbles(reader.read(2));
+        }
+        case 0x04: { // ALPHA
+          const nibbles = extract_nibbles(reader.read(2));
+          alpha = [nibbles[0] | (nibbles[0] << 4), nibbles[1] | (nibbles[1] << 4), nibbles[2] | (nibbles[2] << 4), nibbles[3] | (nibbles[3] << 4)];
           break;
-        case 0x05: // COORD
-          console.log('COORD');
+        }
+        case 0x05: { // COORD
           const nibbles = extract_nibbles(reader.read(6));
           coords = [
             (nibbles[0] << 8) | (nibbles[1] << 4) | (nibbles[2] << 0),
@@ -105,21 +112,27 @@ export default (packet: Uint8Array): RenderResult => {
             (nibbles[9] << 8) | (nibbles[10] << 4) | (nibbles[11] << 0),
           ];
           break;
-        case 0x06: // RLE OFFSET
-          console.log('OFFSET');
+        }
+        case 0x06: { // RLE OFFSET
           offsets = [reader.readU16(), reader.readU16()];
           break;
-        case 0xFF:
-          console.log('END');
+        }
+        case 0xFF: {
           break LOOP;
+        }
       }
     }
     if (is_end) { break; }
   }
 
+  if (coords == null || offsets == null || index == null || alpha == null) {
+    throw new Error('Invalid!');
+  }
+  console.log(index, alpha, palette, rgb);
+
   const width = (coords[1] - coords[0] + 1);
   const height = (coords[3] - coords[2] + 1);
-  const data = Array.from({ length: width * height }, () => 0);
+  const data = new Uint8Array(width * height * 4);
 
   for (const [offset, start, end] of [[0, offsets[0], offsets[1]], [1, offsets[1], data_packet_size]]){
     const reader = new NibbleReader(data_packet.subarray(start - 4, end - 4));
@@ -140,12 +153,15 @@ export default (packet: Uint8Array): RenderResult => {
         }
       }
       const run = rle >> 2;
-      const color = rle & 0b11;
+      const color = 0b11 - (rle & 0b11);
 
       for (let i = 0; i < run; i++) {
         const nx = x + i;
         if (y < 0 || y >= height || nx < 0 || nx >= width) { break; }
-        data[y * width + nx] = color;
+        data[4 * (y * width + nx) + 0] = rgb[index[color]][0];
+        data[4 * (y * width + nx) + 1] = rgb[index[color]][1];
+        data[4 * (y * width + nx) + 2] = rgb[index[color]][2];
+        data[4 * (y * width + nx) + 3] = alpha[color];
       }
 
       x += run;
@@ -158,6 +174,8 @@ export default (packet: Uint8Array): RenderResult => {
   }
 
   return {
+    begin,
+    end,
     origin: [coords[0], coords[2]],
     extent: [width, height],
     data,

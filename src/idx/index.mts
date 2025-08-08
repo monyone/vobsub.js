@@ -16,7 +16,7 @@ const to_seconds = (ts: string[]) => {
 }
 
 export default (idx: string): IDXContext => {
-  const lines = idx.split('\n');
+  const lines = idx.split(/\r?\n/);
 
   let size: [number, number] | null = null;
   let origin: [number, number] | null = null;
