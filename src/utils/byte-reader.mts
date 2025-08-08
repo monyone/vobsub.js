@@ -7,7 +7,7 @@ export class ByteReader {
 
   constructor(data: Uint8Array) {
     this.data = data;
-    this.view = new DataView(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength));
+    this.view = new DataView(data.buffer, data.byteOffset, data.byteLength);
     this.offset = 0;
   }
 
@@ -16,7 +16,7 @@ export class ByteReader {
   }
 
   public isEmpty(): boolean {
-    return this.offset === this.view.byteLength;
+    return this.offset >= this.view.byteLength;
   }
 
   public consumed(): number {
