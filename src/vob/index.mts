@@ -128,7 +128,6 @@ export default (packet: Uint8Array, palette: string[]): VOBData => {
   if (coords == null || offsets == null || index == null || alpha == null) {
     throw new Error('Invalid!');
   }
-  console.log(index, alpha, palette, rgb);
 
   const width = (coords[1] - coords[0] + 1);
   const height = (coords[3] - coords[2] + 1);
