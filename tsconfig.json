@@ -8,8 +8,8 @@
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
     "module": "nodenext",
-    "target": "es2024",
-    "types": ["node"],
+    "target": "esnext",
+    "types": [],
 
     // Other Outputs
     "sourceMap": true,

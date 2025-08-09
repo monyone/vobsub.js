@@ -6,7 +6,7 @@ export type VOBData = {
   end: number | null,
   origin: [number, number];
   extent: [number, number];
-  data: Uint8Array; // RGBA
+  data: Uint8ClampedArray; // RGBA
 };
 
 const extract_nibbles = (data: Uint8Array) => {
@@ -131,7 +131,7 @@ export default (packet: Uint8Array, palette: string[]): VOBData => {
 
   const width = (coords[1] - coords[0] + 1);
   const height = (coords[3] - coords[2] + 1);
-  const data = new Uint8Array(width * height * 4);
+  const data = new Uint8ClampedArray(width * height * 4);
 
   for (const [offset, start, end] of [[0, offsets[0], offsets[1]], [1, offsets[1], data_packet_size]]){
     const reader = new NibbleReader(data_packet.subarray(start - 4, end - 4));

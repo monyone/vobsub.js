@@ -48,7 +48,7 @@ export default (ps: PSDemuxResult[]): PESDemuxResult[] => {
           ps_offset = offset;
           packets = [payload.subarray(1)];
         } else {
-          packets.push(payload.subarray(1))
+          packets.push(payload.subarray(1));
         }
       }
     }
@@ -58,7 +58,7 @@ export default (ps: PSDemuxResult[]): PESDemuxResult[] => {
     result.push({
       offset: ps_offset,
       packet: concat(packets),
-    })
+    });
   }
 
   return result;
