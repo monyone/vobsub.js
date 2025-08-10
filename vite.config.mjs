@@ -6,7 +6,7 @@ export default defineConfig({
     emptyOutDir: false,
 
     lib: {
-      entry: resolve(__dirname, 'src/index.mts'),
+      entry: resolve(__dirname, 'src/runtime/browser/index.mts'),
       name: 'index',
       fileName: 'index',
       formats: ['es', 'umd'],

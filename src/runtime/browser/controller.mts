@@ -1,13 +1,15 @@
-import ps from "./ps/index.mts";
-import extract_pes from "./pes/index.mts";
-import extract_idx from "./idx/index.mts";
-import render_vob, { type VOBData } from "./vob/index.mts";
-import { MainThreadRenderer } from "./renderer-main.mts";
+import ps from "../../ps/index.mts";
+import extract_pes from "../../pes/index.mts";
+import extract_idx from "../../idx/index.mts";
+import render_vob, { type VOBData } from "../../vob/index.mts";
+import { CanvasMainThreadRenderer } from "./renderer/canvas/main.mts";
+import type { Renderer } from "./renderer/renderer.mts";
 
 export default class Controller {
   private media: HTMLMediaElement | null = null;
+  private container: HTMLElement | null = null;
   private isShowing: boolean = true;
-  private renderer: MainThreadRenderer;
+  private renderer: Renderer | null;
   // VOB
   private origin: [number, number];
   // Subtitle Data
@@ -22,7 +24,7 @@ export default class Controller {
 
     const { cues, palette, size, origin } = extract_idx(idx);
     const file_to_time = new Map<number, number>(cues.map(({ filepos, seconds }) => [filepos, seconds]));
-    this.renderer = new MainThreadRenderer(size);
+    this.renderer = new CanvasMainThreadRenderer(size);
     this.origin = origin;
 
     this.subtitles = extract_pes(ps(vob)).filter(({ offset }) => {
@@ -69,6 +71,8 @@ export default class Controller {
   }
 
   public render(): void {
+    if (this.renderer == null) { return; }
+
     if (!this.isShowing) { return; }
     this.timer = requestAnimationFrame(this.renderHandler);
 
@@ -87,25 +91,33 @@ export default class Controller {
     }
   }
 
-  public attachMedia(media: HTMLMediaElement): void {
+  public attachMedia(media: HTMLMediaElement, container?: HTMLElement): void {
     this.media = media;
+    this.container = container ?? media.parentElement;
+    if (this.renderer != null) { this.attachRenderer(this.renderer); }
     if (this.timer != null) { return; }
     this.timer = requestAnimationFrame(this.renderHandler);
   }
 
   public detachMedia(): void {
-    this.media = null;
+    if (this.renderer) { this.detachRenderer(); }
+    this.media = this.container = null;
     if (this.timer == null) { return; }
     cancelAnimationFrame(this.timer);
     this.timer = null;
   }
 
-  public attachCanvas(canvas: HTMLCanvasElement): void {
-    this.renderer.attachCanvas(canvas);
+  public attachRenderer(renderer: Renderer): void {
+    this.container?.appendChild(renderer.node());
+    this.renderer = renderer;
+    this.render();
   }
 
-  public detachCanvas(): void {
-    this.renderer.detachCanvas();
+  public detachRenderer(): void {
+    if (this.renderer == null) { return; }
+    this.container?.removeChild(this.renderer.node());
+    this.renderer.clear();
+    this.renderer = null;
   }
 
   public showing(): boolean {
@@ -114,12 +126,14 @@ export default class Controller {
 
   public show(): void {
     this.isShowing = true;
+    this.renderer?.show();
     if (this.timer != null) { return; }
     this.timer = requestAnimationFrame(this.renderHandler);
   }
 
   public hide(): void {
     this.isShowing = false;
+    this.renderer?.hide();
     if (this.timer == null) { return; }
     cancelAnimationFrame(this.timer);
     this.timer = null;

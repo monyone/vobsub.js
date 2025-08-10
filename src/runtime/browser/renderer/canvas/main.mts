@@ -1,22 +1,9 @@
-import type { VOBData } from "./vob/index.mts";
+import type { VOBData } from "../../../../vob/index.mts";
+import { CanvasRenderer } from "./base.mts";
 
-export class MainThreadRenderer {
-  private onscreen: HTMLCanvasElement | null = null;
-  // From IDX
-  private size: [number, number];
-
+export class CanvasMainThreadRenderer extends CanvasRenderer {
   public constructor(size: [number, number]) {
-    this.size = size;
-  }
-
-  public attachCanvas(canvas: HTMLCanvasElement): void {
-    this.onscreen = canvas;
-    this.onscreen.width = this.size[0];
-    this.onscreen.height = this.size[1];
-  }
-
-  public detachCanvas(): void {
-    this.onscreen = null;
+    super(size);
   }
 
   public render({ extent, origin, data }: VOBData): void {
@@ -30,7 +17,7 @@ export class MainThreadRenderer {
   }
 
   public clear(): void {
-     if (this.onscreen == null) { return; }
+    if (this.onscreen == null) { return; }
     const on_context = this.onscreen.getContext('2d');
     if (on_context == null) { return; }
 
