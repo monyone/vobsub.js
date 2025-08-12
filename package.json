@@ -4,6 +4,9 @@
   "main": "index.js",
   "license": "MIT",
   "private": true,
+  "scripts": {
+    "build": "vite build"
+  },
   "devDependencies": {
     "typescript": "^5.9.2",
     "vite": "^7.1.1"

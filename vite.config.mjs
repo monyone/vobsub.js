@@ -3,7 +3,7 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   build: {
-    emptyOutDir: false,
+    emptyOutDir: true,
 
     lib: {
       entry: resolve(__dirname, 'src/runtime/browser/index.mts'),
