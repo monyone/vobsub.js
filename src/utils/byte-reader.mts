@@ -109,7 +109,7 @@ export class ByteReader {
   }
 
   public peekU32(): number {
-    if (!this.exists(3)) {
+    if (!this.exists(4)) {
       throw new EOFError('Detected EOF!');
     }
 
